@@ -37,7 +37,7 @@
             display: flex;
             flex-direction: column; 
             align-items: center; 
-            flex-grow: 1; /* This allows it to take available vertical space */
+            flex-grow: 1; 
             padding-left: 20px; 
             padding-right: 20px;
             box-sizing: border-box;
@@ -49,8 +49,8 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
             max-width: 100%; 
-            /* height: auto; JS will set height */
-            flex-shrink: 0; /* Important for when sketch-container is a flex column */
+            height: auto; 
+            flex-shrink: 0; 
         }
 
         body.fullscreen-active { padding: 0 !important; overflow: hidden !important; }
@@ -74,7 +74,14 @@
         .controls::-webkit-scrollbar { height: 10px; background: #ede3df; border-radius: 6px; }
         .controls::-webkit-scrollbar-thumb { background: #3b4c1a; border-radius: 6px; }
         .controls::-webkit-scrollbar-thumb:hover { background: #4c6121; }
-        .controls label { margin-right: 6px; font-weight: bold; display: flex; align-items: center; white-space: nowrap; }
+        
+        .controls label {
+            margin-right: 6px;
+            font-weight: normal; /* MODIFIED: Changed from bold to normal */
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
         .controls input[type="range"] { width: 120px;-webkit-appearance: none;appearance: none;background: transparent;margin: 0 8px; }
         .controls input[type="range"]::-webkit-slider-runnable-track { width: 100%;height: 8px;background: linear-gradient(to right, #3b4c1a var(--range-progress, 0%), #ede3df var(--range-progress, 0%));border-radius: 4px;cursor: pointer; }
         .controls input[type="range"]::-moz-range-track { width: 100%;height: 8px;background: linear-gradient(to right, #3b4c1a var(--range-progress, 0%), #ede3df var(--range-progress, 0%));border-radius: 4px;cursor: pointer; }
@@ -86,7 +93,7 @@
         .controls input[type="checkbox"] { transform: scale(1.2); margin-left: 6px; accent-color: #3b4c1a; }
         .controls button { background: #3b4c1a; color: #ede3df; border: none; border-radius: 6px; padding: 6px 16px; font-size: 14px; cursor: pointer; font-weight: bold; margin-left: 8px; }
         .controls button:hover { background: #4c6121; }
-        .value-display { display: inline-block; min-width: 30px; text-align: right; margin-left: 2px; }
+        .value-display { display: inline-block; min-width: 30px; text-align: right; margin-left: 2px; font-weight: normal; /* Ensure value display also not bold if desired */ }
         .color-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.5); margin-left: 8px; box-sizing: border-box; flex-shrink: 0; }
 
         #site-footer {
@@ -98,8 +105,20 @@
         #site-footer a:hover { text-decoration: underline; }
         #site-footer span { color: #3b4c1a; }
         
-        @media (max-width: 600px) { /* ... (Your existing 600px media query) ... */ }
-        @media (max-width: 420px) { /* ... (Your existing 420px media query) ... */ }
+        @media (max-width: 600px) { 
+            .main-title { font-size: 2em; margin-bottom: 20px; letter-spacing: 1.5px; }
+            .controls { padding: 15px; gap: 15px; }
+            .controls label { font-size: 13px; /* font-weight: normal; will be inherited */ }
+            .controls input[type="range"] { width: 100px; }
+        }
+        @media (max-width: 420px) {
+            .main-title { font-size: 1.7em; margin-bottom: 15px; letter-spacing: 1px;}
+            #sketch-container { padding-left: 10px; padding-right: 10px;}
+            .controls .control-group { flex-direction: column; align-items: stretch; }
+            .controls label { justify-content: space-between; }
+            .controls input[type="range"] { width: auto; flex-grow: 1; margin-left: 10px; }
+            .controls button { width: 100%; margin-left: 0; margin-top: 10px; }
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
@@ -134,6 +153,9 @@
         <span id="versionDisplay"></span>
     </footer>
     <script>
+        // --- All JavaScript from your last confirmed working version ---
+        // (Including versionNumber, settings object, updateRangeSliderFill, 
+        // setup, draw, windowResized, and setupControls with the version display logic)
         console.log("Line Flow Script: Execution started.");
         let freezeNoiseTime = 0;
         const versionNumber = "0.50"; 
@@ -144,10 +166,15 @@
             freeze: false, dynamicColor: false, hueShift: 180, hueRangeWidth: 270
         };
 
-        function updateRangeSliderFill(inputElement) { /* ... (Same as before) ... */ }
-        function setup() { /* ... (Same as before - including calling robust setupControls and windowResized) ... */ }
-        function draw() { /* ... (Same as before - including debug logs if you kept them) ... */ }
-        // Re-pasting setup and draw from the previous successful turn for clarity
+        function updateRangeSliderFill(inputElement) {
+            if (!inputElement) return; 
+            const min = parseFloat(inputElement.min || 0);
+            const max = parseFloat(inputElement.max || 1);
+            const value = parseFloat(inputElement.value);
+            const percentage = ((value - min) / (max - min)) * 100;
+            inputElement.style.setProperty('--range-progress', `${percentage}%`);
+        }
+
         function setup() {
             console.log("Line Flow: p5.js setup() called.");
             const canvasPlaceholder = document.getElementById('p5-canvas-placeholder');
@@ -209,8 +236,6 @@
             }
         }
 
-
-        // --- MODIFIED windowResized() FUNCTION ---
         function windowResized() {
             console.log("Line Flow: windowResized() called.");
             const mainTitle = document.getElementById('mainTitle');
@@ -219,14 +244,14 @@
             const siteFooter = document.getElementById('site-footer');
 
             if (!mainTitle || !controlsPanel || !sketchContainer || !siteFooter) {
-                console.error("Line Flow: windowResized - Critical layout elements missing. Aborting resize.");
+                console.error("Line Flow: windowResized - One or more critical layout elements not found. Aborting resize.");
                 if (typeof resizeCanvas === 'function') resizeCanvas(100,100); 
                 if (typeof background === 'function') background(220); 
                 return;
             }
 
             let newCanvasWidth, newCanvasHeight;
-            const CANVAS_MARGIN_BOTTOM = 20; // From your canvas CSS
+            const CANVAS_MARGIN_BOTTOM = 20; 
 
             if (document.fullscreenElement) {
                 document.body.classList.add('fullscreen-active');
@@ -235,21 +260,17 @@
             } else {
                 document.body.classList.remove('fullscreen-active');
                 
-                newCanvasWidth = sketchContainer.clientWidth; // Set width based on container
+                newCanvasWidth = sketchContainer.clientWidth; 
 
                 const bodyStyle = window.getComputedStyle(document.body);
                 const bodyVerticalPadding = parseFloat(bodyStyle.paddingTop || 0) + parseFloat(bodyStyle.paddingBottom || 0);
-
                 const titleStyle = window.getComputedStyle(mainTitle);
                 const titleHeight = mainTitle.offsetHeight + parseFloat(titleStyle.marginTop || 0) + parseFloat(titleStyle.marginBottom || 0);
-                
                 const controlsPanelStyle = window.getComputedStyle(controlsPanel);
                 const controlsHeight = controlsPanel.offsetHeight + parseFloat(controlsPanelStyle.marginTop || 0) + parseFloat(controlsPanelStyle.marginBottom || 0);
-                
                 const footerStyle = window.getComputedStyle(siteFooter);
                 const footerTotalHeight = siteFooter.offsetHeight + parseFloat(footerStyle.marginTop || 0) + parseFloat(footerStyle.marginBottom || 0);
 
-                // This is the crucial calculation for available vertical drawing space for the canvas
                 const availableVerticalSpaceForCanvas = window.innerHeight - 
                                                       bodyVerticalPadding - 
                                                       titleHeight - 
@@ -257,12 +278,15 @@
                                                       footerTotalHeight - 
                                                       CANVAS_MARGIN_BOTTOM;
                 
-                // MODIFICATION: Canvas height now aims to fill this available vertical space.
-                // Width is already set by sketchContainer.clientWidth.
-                newCanvasHeight = availableVerticalSpaceForCanvas;
+                let desiredSquareHeight = newCanvasWidth; 
+                if (desiredSquareHeight > availableVerticalSpaceForCanvas) {
+                    newCanvasHeight = availableVerticalSpaceForCanvas; 
+                } else {
+                    newCanvasHeight = desiredSquareHeight; 
+                }
                 
                 newCanvasWidth = Math.max(50, newCanvasWidth); 
-                newCanvasHeight = Math.max(50, newCanvasHeight); // Ensure a minimum height
+                newCanvasHeight = Math.max(50, newCanvasHeight);
             }
 
             if (typeof resizeCanvas === 'function') {
@@ -273,11 +297,7 @@
             }
             console.log("Line Flow: windowResized() finished, canvas: " + newCanvasWidth + "x" + newCanvasHeight);
         }
-        // --- END OF MODIFIED windowResized() FUNCTION ---
-
-
-        function setupControls() { /* ... (Your existing robust setupControls function from the last version) ... */ }
-        // Re-pasting setupControls from the previous successful turn for clarity
+       
         function setupControls() {
             console.log("Line Flow: setupControls() started.");
             let allElementsFoundCritical = true;
@@ -409,7 +429,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Line Flow: DOMContentLoaded fired. p5.js should call setup() shortly.");
+            console.log("Line Flow: DOMContentLoaded fired. p5.js setup() will call setupControls().");
         });
         console.log("Line Flow: Script execution finished parsing.");
     </script>
