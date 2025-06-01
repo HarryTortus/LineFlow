@@ -8,15 +8,16 @@
     <style>
         body {
             margin: 0;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Prevent horizontal scroll */
             background-color: #ede3df;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 10px 0;
+            flex-direction: column; /* Stack elements vertically */
+            align-items: center; /* Center content horizontally */
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            padding: 10px 0; /* Add vertical padding around the entire content */
             box-sizing: border-box;
         }
+
         .main-title {
             font-family: 'Oswald', sans-serif;
             font-weight: 700;
@@ -27,29 +28,58 @@
             text-align: center;
             letter-spacing: 2px;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+            flex-shrink: 0; /* Prevent title from shrinking */
         }
 
         #sketch-container {
-            width: 95vw;
-            max-width: 900px;
+            /* This container will hold the canvas and controls, taking available space */
+            width: 100%; /* Take full width of parent's allowed space */
+            max-width: 1200px; /* Increased max-width for larger windowed view */
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Stack canvas and controls vertically */
             align-items: center;
             justify-content: center;
-            flex-grow: 1;
+            flex-grow: 1; /* Allows sketch-container to grow and push footer down if needed */
+            padding: 0 10px; /* Small horizontal padding to prevent hitting edges */
+            box-sizing: border-box;
         }
+
         canvas {
-            display: block;
-            margin-bottom: 32px;
+            display: block; /* Remove extra space below canvas */
+            margin-bottom: 32px; /* Padding between canvas and controls */
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-            max-width: 100%;
-            height: auto;
+            max-width: 100%; /* Ensure canvas doesn't overflow its container */
+            height: auto; /* Maintain aspect ratio */
+            flex-shrink: 0; /* Prevent canvas from shrinking below its calculated size */
         }
+
+        /* Fullscreen specific styles */
+        body.fullscreen-active {
+            padding: 0 !important; /* Remove all padding when fullscreen */
+            overflow: hidden !important; /* Hide scrollbars in fullscreen */
+        }
+        body.fullscreen-active .main-title,
+        body.fullscreen-active .controls {
+            display: none !important; /* Hide title and controls in fullscreen */
+        }
+        body.fullscreen-active #sketch-container {
+            width: 100vw !important; /* Take full viewport width */
+            height: 100vh !important; /* Take full viewport height */
+            max-width: none !important; /* Remove max-width restriction */
+            padding: 0 !important; /* Remove padding */
+        }
+        body.fullscreen-active canvas {
+            margin-bottom: 0 !important; /* Remove margin below canvas */
+            border-radius: 0 !important; /* No border radius in fullscreen */
+            box-shadow: none !important; /* No shadow in fullscreen */
+        }
+
+
         .controls {
             display: flex;
-            flex-direction: column; 
-            gap: 18px; 
+            flex-direction: column;
+            gap: 18px;
             background: rgba(76, 97, 33, 0.9);
             border-radius: 12px;
             padding: 16px 24px;
@@ -59,21 +89,22 @@
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.10);
-            max-width: 95vw;
+            max-width: 95vw; /* Allow controls to be wide, but not too wide */
             box-sizing: border-box;
-            position: relative;
+            flex-shrink: 0; /* Prevent controls from shrinking */
+            position: relative; /* For scrollbar */
         }
 
         .controls .control-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 18px; 
-            width: 100%; 
-            justify-content: center; 
+            gap: 18px;
+            width: 100%;
+            justify-content: center;
         }
 
         .controls .control-group.action-group {
-            padding-top: 18px; 
+            padding-top: 18px;
         }
 
         .controls::-webkit-scrollbar {
@@ -178,14 +209,9 @@
 
         .value-display {
             display: inline-block;
-            min-width: 30px; 
+            min-width: 30px;
             text-align: right;
-            margin-left: 2px; 
-        }
-
-        /* Using a specific class for fullscreen hidden state for clarity */
-        .visually-hidden-on-fullscreen {
-            display: none !important; 
+            margin-left: 2px;
         }
 
         .color-swatch {
@@ -197,6 +223,9 @@
             box-sizing: border-box;
             flex-shrink: 0;
         }
+
+        /* Removed .visually-hidden-on-fullscreen class as it's handled by body.fullscreen-active */
+        /* dynamicColorHueShiftControl will still be hidden when dynamicColor is false by JS */
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
@@ -238,12 +267,11 @@
                     Dynamic Color
                     <input id="dynamicColor" type="checkbox">
                 </label>
-                <label id="fixedLineColorControl"> 
+                <label id="fixedLineColorControl">
                     Line Color
                     <input id="lineColor" type="color">
                 </label>
-                <label id="dynamicColorHueShiftControl" class="visually-hidden-on-fullscreen">
-                    Color Palette Shift
+                <label id="dynamicColorHueShiftControl" style="display: none;"> Color Palette Shift
                     <input id="hueShift" type="range" min="0" max="360" step="1">
                     <div id="hueShiftColorSwatch" class="color-swatch"></div>
                 </label>
@@ -252,7 +280,7 @@
                     <input id="backgroundColor" type="color">
                 </label>
                 <button id="reset">Reset</button>
-                <button id="fullscreenButton">Fullscreen</button> 
+                <button id="fullscreenButton">Fullscreen</button>
             </div>
         </div>
     </div>
@@ -261,7 +289,7 @@
 
         const settings = {
             resolution: 20,
-            lineLength: 30, 
+            lineLength: 30,
             noiseScale: 0.001,
             noiseSpeed: 0.0001,
             lineThickness: 1,
@@ -269,8 +297,8 @@
             backgroundColor: '#ede3df',
             freeze: false,
             dynamicColor: false,
-            hueShift: 180, 
-            hueRangeWidth: 270 
+            hueShift: 180,
+            hueRangeWidth: 270
         };
 
         function updateRangeSliderFill(inputElement) {
@@ -285,21 +313,18 @@
         // P5.js setup function
         function setup() {
             const canvasPlaceholder = document.getElementById('p5-canvas-placeholder');
-            const c = createCanvas(100, 100); 
+            // We create a temporary 1x1 canvas initially; it will be resized correctly by windowResized()
+            const c = createCanvas(1, 1);
             c.parent(canvasPlaceholder);
-            
+
             background(settings.backgroundColor);
             strokeCap(ROUND);
-            
-            // Only call setupControls once the DOM is fully loaded and ready
-            // The DOMContentLoaded listener handles this, so we don't need to call it directly here anymore.
-            // This setup() is for p5.js, which usually runs after DOM is ready due to script placement.
-            // But having a dedicated DOMContentLoaded ensures all elements are there.
-            
+
             // Initial update for sliders in case setupControls is called later by DOMContentLoaded
             document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
 
-            windowResized(); 
+            // Call windowResized initially to set correct canvas size
+            windowResized();
         }
 
         function draw() {
@@ -312,7 +337,7 @@
                 freezeNoiseTime = millis() * settings.noiseSpeed;
                 noiseZ = freezeNoiseTime;
             }
-            
+
             strokeWeight(settings.lineThickness);
 
             for (let y = -settings.lineLength; y < height + settings.lineLength; y += settings.resolution) {
@@ -326,19 +351,18 @@
                     let angle = rawNoiseValue * TWO_PI * 2;
 
                     if (settings.dynamicColor) {
-                        colorMode(HSB, 360, 100, 100); 
-                        
-                        const hueRangeWidth = settings.hueRangeWidth; 
+                        colorMode(HSB, 360, 100, 100);
+                        const hueRangeWidth = settings.hueRangeWidth;
                         const halfHueRangeWidth = hueRangeWidth / 2;
 
                         let hueOffset = map(rawNoiseValue, 0, 1, -halfHueRangeWidth, halfHueRangeWidth);
 
-                        let finalHue = (settings.hueShift + hueOffset + 360) % 360; 
+                        let finalHue = (settings.hueShift + hueOffset + 360) % 360;
 
-                        stroke(finalHue, 80, 90); 
+                        stroke(finalHue, 80, 90);
                     } else {
-                        colorMode(RGB, 255, 255, 255); 
-                        stroke(settings.lineColor); 
+                        colorMode(RGB, 255, 255, 255);
+                        stroke(settings.lineColor);
                     }
 
                     let x2 = x + cos(angle) * settings.lineLength;
@@ -350,54 +374,65 @@
         }
 
         function windowResized() {
-            console.log("windowResized called."); 
+            console.log("windowResized called.");
             const mainTitle = document.getElementById('mainTitle');
             const controlsPanel = document.getElementById('controlsPanel');
+            const canvasPlaceholder = document.getElementById('p5-canvas-placeholder');
 
             let newCanvasWidth, newCanvasHeight;
+            const PADDING_CANVAS_CONTROLS = 32; // This is the margin-bottom from canvas CSS
+            const PADDING_BODY_TOP_BOTTOM = parseFloat(window.getComputedStyle(document.body).paddingTop) + parseFloat(window.getComputedStyle(document.body).paddingBottom);
+            const PADDING_BODY_LEFT_RIGHT = parseFloat(window.getComputedStyle(document.body).paddingLeft) + parseFloat(window.getComputedStyle(document.body).paddingRight);
+            const SKETCH_CONTAINER_HPADDING = parseFloat(window.getComputedStyle(document.getElementById('sketch-container')).paddingLeft) + parseFloat(window.getComputedStyle(document.getElementById('sketch-container')).paddingRight);
 
             if (document.fullscreenElement) {
-                console.log("In fullscreen mode. Hiding controls."); 
-                // Check if elements exist before manipulating classList
-                if (mainTitle) mainTitle.classList.add('visually-hidden-on-fullscreen');
-                if (controlsPanel) controlsPanel.classList.add('visually-hidden-on-fullscreen');
+                console.log("In fullscreen mode.");
+                document.body.classList.add('fullscreen-active'); // Add class to body for fullscreen specific styles
 
                 newCanvasWidth = window.innerWidth;
                 newCanvasHeight = window.innerHeight;
 
             } else {
-                console.log("Not in fullscreen mode. Showing controls."); 
-                // Check if elements exist before manipulating classList
-                if (mainTitle) mainTitle.classList.remove('visually-hidden-on-fullscreen');
-                if (controlsPanel) controlsPanel.classList.remove('visually-hidden-on-fullscreen');
+                console.log("Not in fullscreen mode.");
+                document.body.classList.remove('fullscreen-active'); // Remove class
 
-                const bodyVerticalPadding = parseFloat(window.getComputedStyle(document.body).paddingTop) + parseFloat(window.getComputedStyle(document.body).paddingBottom);
-                
-                // Get heights safely, defaulting to 0 if element is null
-                const titleHeightWithMargin = mainTitle ? mainTitle.offsetHeight + parseFloat(window.getComputedStyle(mainTitle).marginBottom) : 0;
-                const controlsHeightWithMargin = controlsPanel ? controlsPanel.offsetHeight + parseFloat(window.getComputedStyle(controlsPanel).marginBottom) : 0;
+                // Calculate available width for canvas
+                const availableWidth = window.innerWidth - PADDING_BODY_LEFT_RIGHT - SKETCH_CONTAINER_HPADDING;
+                newCanvasWidth = availableWidth;
 
-                const availableHeightForCanvas = window.innerHeight - bodyVerticalPadding - titleHeightWithMargin - controlsHeightWithMargin;
+                // Calculate available height for canvas
+                const titleHeight = mainTitle ? mainTitle.offsetHeight + parseFloat(window.getComputedStyle(mainTitle).marginBottom) : 0;
+                const controlsHeight = controlsPanel ? controlsPanel.offsetHeight + parseFloat(window.getComputedStyle(controlsPanel).marginBottom) : 0;
+                const availableHeight = window.innerHeight - PADDING_BODY_TOP_BOTTOM - titleHeight - controlsHeight - PADDING_CANVAS_CONTROLS;
 
-                newCanvasWidth = windowWidth * 0.95;
-                const targetHeightRatio = 9 / 16;
-                const idealHeight = newCanvasWidth * targetHeightRatio;
-
-                newCanvasHeight = Math.min(idealHeight, availableHeightForCanvas);
+                // Aim for a square canvas or a desired aspect ratio, fitting within available space
+                // Let's make it square to simplify for now, and ensure it fills height as much as possible
+                newCanvasHeight = availableHeight;
+                // Take the minimum of available width and height for a square that fits well
+                const size = Math.min(newCanvasWidth, newCanvasHeight);
+                newCanvasWidth = size;
+                newCanvasHeight = size;
+                // If you want a specific aspect ratio, e.g., 16:9, use:
+                // let aspectRatio = 16 / 9;
+                // let calculatedWidth = availableHeight * aspectRatio;
+                // let calculatedHeight = availableWidth / aspectRatio;
+                // newCanvasWidth = Math.min(availableWidth, calculatedWidth);
+                // newCanvasHeight = Math.min(availableHeight, calculatedHeight);
+                // If the aspect ratio calculations are complex, a simple square (size, size) is often a good start.
             }
 
             resizeCanvas(newCanvasWidth, newCanvasHeight);
             background(settings.backgroundColor);
-            console.log(`Canvas resized to: ${newCanvasWidth}x${newCanvasHeight}`); 
+            console.log(`Canvas resized to: ${newCanvasWidth}x${newCanvasHeight}`);
         }
 
         function setupControls() {
             console.log("setupControls called.");
-            const fixedLineColorControl = document.getElementById('fixedLineColorControl'); 
+            const fixedLineColorControl = document.getElementById('fixedLineColorControl');
             const dynamicColorHueShiftControl = document.getElementById('dynamicColorHueShiftControl');
             const hueShiftInput = document.getElementById('hueShift');
             const hueShiftColorSwatch = document.getElementById('hueShiftColorSwatch');
-            const fullscreenButton = document.getElementById('fullscreenButton'); 
+            const fullscreenButton = document.getElementById('fullscreenButton');
             const resetButton = document.getElementById('reset'); // Get reset button
 
             // Ensure elements exist before trying to access their properties or add listeners
@@ -417,13 +452,15 @@
             document.getElementById('dynamicColor').checked = settings.dynamicColor;
             hueShiftInput.value = settings.hueShift;
 
+            // Dynamically show/hide color controls based on dynamicColor setting
             if (settings.dynamicColor) {
-                fixedLineColorControl.classList.add('visually-hidden-on-fullscreen'); // Use new class name
-                dynamicColorHueShiftControl.classList.remove('visually-hidden-on-fullscreen');
+                fixedLineColorControl.style.display = 'none';
+                dynamicColorHueShiftControl.style.display = 'flex'; // Use flex to match its control-group display
             } else {
-                fixedLineColorControl.classList.remove('visually-hidden-on-fullscreen');
-                dynamicColorHueShiftControl.classList.add('visually-hidden-on-fullscreen');
+                fixedLineColorControl.style.display = 'flex';
+                dynamicColorHueShiftControl.style.display = 'none';
             }
+
 
             function updateLabels() {
                 const resolutionValue = document.getElementById('resolution-value');
@@ -434,11 +471,11 @@
 
                 if (resolutionValue) resolutionValue.textContent = settings.resolution;
                 if (lineLengthValue) lineLengthValue.textContent = Number(settings.lineLength).toFixed(0);
-                if (noiseScaleValue) noiseScaleValue.textContent = (settings.noiseScale * 1000).toFixed(0); 
-                if (noiseSpeedValue) noiseSpeedValue.textContent = (settings.noiseSpeed * 10000).toFixed(0); 
+                if (noiseScaleValue) noiseScaleValue.textContent = (settings.noiseScale * 1000).toFixed(0);
+                if (noiseSpeedValue) noiseSpeedValue.textContent = (settings.noiseSpeed * 10000).toFixed(0);
                 if (lineThicknessValue) lineThicknessValue.textContent = Number(settings.lineThickness).toFixed(1);
-                
-                if (hueShiftColorSwatch) hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`; 
+
+                if (hueShiftColorSwatch) hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`;
             }
             updateLabels();
 
@@ -446,19 +483,19 @@
                 input.addEventListener('input', e => {
                     const id = e.target.id;
                     const value = e.target.type === 'range' || e.target.type === 'number' ? Number(e.target.value) : e.target.value;
-                    
+
                     if (id === 'freeze') {
                         settings.freeze = e.target.checked;
                     } else if (id === 'dynamicColor') {
                         settings.dynamicColor = e.target.checked;
                         if (settings.dynamicColor) {
-                            fixedLineColorControl.classList.add('visually-hidden-on-fullscreen');
-                            dynamicColorHueShiftControl.classList.remove('visually-hidden-on-fullscreen');
+                            fixedLineColorControl.style.display = 'none';
+                            dynamicColorHueShiftControl.style.display = 'flex';
                         } else {
-                            fixedLineColorControl.classList.remove('visually-hidden-on-fullscreen');
-                            dynamicColorHueShiftControl.classList.add('visually-hidden-on-fullscreen');
+                            fixedLineColorControl.style.display = 'flex';
+                            dynamicColorHueShiftControl.style.display = 'none';
                         }
-                    } else if (id === 'hueShift') { 
+                    } else if (id === 'hueShift') {
                         settings.hueShift = value;
                     }
                     else {
@@ -469,7 +506,7 @@
                         updateRangeSliderFill(e.target);
                     }
                     if (id === 'backgroundColor') {
-                        background(settings.backgroundColor); 
+                        background(settings.backgroundColor);
                     }
                     updateLabels();
                 });
@@ -478,55 +515,55 @@
             resetButton.addEventListener('click', () => {
                 console.log("Reset button clicked.");
                 settings.resolution = 20;
-                settings.lineLength = 30; 
+                settings.lineLength = 30;
                 settings.noiseScale = 0.001;
                 settings.noiseSpeed = 0.0001;
                 settings.lineThickness = 1;
                 settings.lineColor = '#4c6121';
                 settings.backgroundColor = '#ede3df';
                 settings.freeze = false;
-                settings.dynamicColor = false; 
+                settings.dynamicColor = false;
                 settings.hueShift = 180;
                 settings.hueRangeWidth = 270;
 
-                freezeNoiseTime = 0; 
+                freezeNoiseTime = 0;
 
                 // Re-initialize controls to update their values and states
-                setupControls(); 
-                background(settings.backgroundColor); 
+                setupControls();
+                background(settings.backgroundColor);
                 document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
             });
 
             // Fullscreen button functionality
             fullscreenButton.addEventListener('click', () => {
-                console.log("Fullscreen button clicked!"); 
-                if (!document.fullscreenElement) { 
-                    console.log("Attempting to enter fullscreen..."); 
+                console.log("Fullscreen button clicked!");
+                if (!document.fullscreenElement) {
+                    console.log("Attempting to enter fullscreen...");
                     document.documentElement.requestFullscreen().catch(err => {
-                        console.error(`Error attempting to enable full-screen mode:`, err); 
+                        console.error(`Error attempting to enable full-screen mode:`, err);
                     });
-                } else { 
-                    console.log("Attempting to exit fullscreen..."); 
+                } else {
+                    console.log("Attempting to exit fullscreen...");
                     document.exitFullscreen();
                 }
             });
 
             // Listen for fullscreen change events (e.g., user presses Esc)
             document.addEventListener('fullscreenchange', () => {
-                console.log("Fullscreen state changed!"); 
-                windowResized(); 
+                console.log("Fullscreen state changed!");
+                windowResized();
             });
             document.addEventListener('webkitfullscreenchange', () => {
-                console.log("Webkit Fullscreen state changed!"); 
-                windowResized(); 
+                console.log("Webkit Fullscreen state changed!");
+                windowResized();
             });
             document.addEventListener('mozfullscreenchange', () => {
-                console.log("Mozilla Fullscreen state changed!"); 
-                windowResized(); 
+                console.log("Mozilla Fullscreen state changed!");
+                windowResized();
             });
             document.addEventListener('MSFullscreenChange', () => {
-                console.log("MS Fullscreen state changed!"); 
-                windowResized(); 
+                console.log("MS Fullscreen state changed!");
+                windowResized();
             });
         }
 
