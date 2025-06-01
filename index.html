@@ -12,10 +12,10 @@
             background-color: #ede3df;
             display: flex;
             flex-direction: column; 
-            align-items: center; /* Centers sketch-container if it's narrower than viewport (due to max-width) */
+            align-items: center; 
             min-height: 100vh; 
-            padding-top: 20px; /* Overall page top padding */
-            padding-bottom: 20px; /* Overall page bottom padding */
+            padding-top: 20px; 
+            padding-bottom: 10px; /* Reduced bottom padding */
             box-sizing: border-box;
         }
 
@@ -24,7 +24,7 @@
             font-weight: 700;
             font-size: 2.8em;
             color: #3b4c1a;
-            margin-top: 0; /* Adjusted from 20px as body has padding-top now */
+            margin-top: 0; 
             margin-bottom: 30px;
             text-align: center;
             letter-spacing: 2px;
@@ -34,23 +34,23 @@
 
         #sketch-container {
             width: 100%; 
-            max-width: 1200px; /* Max width for the content area */
+            /* max-width: 1200px; */ /* Removed max-width to allow wider expansion */
             display: flex;
             flex-direction: column; 
             align-items: center; 
-            flex-grow: 1; /* Allows sketch-container to grow and push footer down */
-            padding-left: 20px; /* Horizontal padding inside the sketch container */
+            flex-grow: 1; 
+            padding-left: 20px; 
             padding-right: 20px;
             box-sizing: border-box;
         }
 
         canvas {
             display: block; 
-            margin-bottom: 20px; /* Padding between canvas and controls */
+            margin-bottom: 20px; 
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-            max-width: 100%; /* Ensure canvas doesn't overflow its container */
-            height: auto; /* Maintain aspect ratio, JS will set explicit size */
+            max-width: 100%; 
+            height: auto; 
             flex-shrink: 0; 
         }
 
@@ -61,14 +61,14 @@
         }
         body.fullscreen-active .main-title,
         body.fullscreen-active .controls,
-        body.fullscreen-active #site-footer { /* Hide footer in fullscreen */
+        body.fullscreen-active #site-footer { 
             display: none !important; 
         }
         body.fullscreen-active #sketch-container {
             width: 100vw !important; 
             height: 100vh !important; 
             max-width: none !important; 
-            padding: 0 !important; /* Remove padding for sketch-container in fullscreen */
+            padding: 0 !important; 
         }
         body.fullscreen-active canvas {
             margin-bottom: 0 !important; 
@@ -83,23 +83,23 @@
             gap: 18px;
             background: rgba(76, 97, 33, 0.9);
             border-radius: 12px;
-            padding: 20px 24px; /* Slightly increased vertical padding */
+            padding: 20px 24px; 
             align-items: center;
             justify-content: center;
             color: #ede3df;
             font-family: 'Oswald', sans-serif;
             font-size: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.10);
-            width: 100%; /* Controls take full width of sketch-container's content box */
+            width: 100%; 
             box-sizing: border-box;
             flex-shrink: 0; 
-            overflow-x: auto; /* Enable horizontal scroll for control content if it overflows */
-            margin-bottom: 20px; /* Space before footer or bottom of sketch-container */
+            overflow-x: auto; 
+            margin-bottom: 20px; 
         }
 
         .controls .control-group {
             display: flex;
-            flex-wrap: wrap; /* Allow controls to wrap to the next line */
+            flex-wrap: wrap; 
             gap: 18px;
             width: 100%;
             justify-content: center;
@@ -229,12 +229,12 @@
         #site-footer {
             width: 100%;
             text-align: center;
-            padding: 15px 0;
+            padding: 10px 0; /* Reduced vertical padding */
             font-family: 'Oswald', sans-serif;
             font-size: 0.9em;
             color: #3b4c1a;
-            margin-top: auto; /* Pushes footer to the bottom */
-            flex-shrink: 0; /* Prevent footer from shrinking */
+            margin-top: auto; 
+            flex-shrink: 0; 
             box-sizing: border-box;
         }
 
@@ -276,21 +276,21 @@
                 padding-right: 10px;
             }
             .controls .control-group {
-                flex-direction: column; /* Stack controls vertically on very small screens */
-                align-items: stretch; /* Make labels full width */
+                flex-direction: column; 
+                align-items: stretch; 
             }
             .controls label {
-                 justify-content: space-between; /* Space out label text and input */
+                 justify-content: space-between; 
             }
             .controls input[type="range"] {
-                width: auto; /* Allow range to fill space if label is wider */
+                width: auto; 
                 flex-grow: 1;
-                margin-left: 10px; /* Add some margin from label text */
+                margin-left: 10px; 
             }
              .controls button {
                 width: 100%;
                 margin-left: 0;
-                margin-top: 10px; /* Add space if buttons stack */
+                margin-top: 10px; 
             }
         }
 
@@ -433,7 +433,7 @@
             } else {
                 document.body.classList.remove('fullscreen-active');
 
-                newCanvasWidth = sketchContainer.clientWidth; // Uses the content width of sketchContainer
+                newCanvasWidth = sketchContainer.clientWidth; 
 
                 const titleStyle = window.getComputedStyle(mainTitle);
                 const titleHeight = mainTitle.offsetHeight + parseFloat(titleStyle.marginTop) + parseFloat(titleStyle.marginBottom);
@@ -508,9 +508,9 @@
             updateLabels();
 
             document.querySelectorAll('.controls input, .controls button').forEach(el => {
-                if (el.tagName === 'BUTTON' && el.id !== 'reset' && el.id !== 'fullscreenButton') return; // only add input listeners or to specific buttons
+                if (el.tagName === 'BUTTON' && el.id !== 'reset' && el.id !== 'fullscreenButton') return;
 
-                el.addEventListener('input', e => { // 'input' for live changes on sliders/colors
+                el.addEventListener('input', e => { 
                     const id = e.target.id;
                     const target = e.target;
                     let value;
@@ -531,7 +531,7 @@
                         }
                     }
                     if (target.type === 'range') updateRangeSliderFill(target);
-                    if (id === 'backgroundColor') background(settings.backgroundColor); // live update background
+                    if (id === 'backgroundColor') background(settings.backgroundColor); 
                     updateLabels();
                 });
             });
@@ -548,7 +548,7 @@
                 settings.dynamicColor = false;
                 settings.hueShift = 180;
                 freezeNoiseTime = 0;
-                setupControls(); // Re-initialize and update UI
+                setupControls(); 
                 background(settings.backgroundColor);
                 document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
             });
