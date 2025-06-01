@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapid Prototype: Flow Field</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #ede3df;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px 0;
+            box-sizing: border-box;
+        }
+        .main-title {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 700;
+            font-size: 2.8em;
+            color: #3b4c1a;
+            margin-top: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        #sketch-container {
+            width: 95vw;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        canvas {
+            display: block;
+            margin-bottom: 32px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            max-width: 100%;
+            height: auto;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column; 
+            gap: 18px; 
+            background: rgba(76, 97, 33, 0.9);
+            border-radius: 12px;
+            padding: 16px 24px;
+            align-items: center;
+            justify-content: center;
+            color: #ede3df;
+            font-family: 'Oswald', sans-serif;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+            max-width: 95vw;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .controls .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px; 
+            width: 100%; 
+            justify-content: center; 
+        }
+
+        .controls .control-group.action-group {
+            padding-top: 18px; 
+        }
+
+        .controls::-webkit-scrollbar {
+            height: 10px;
+            background: #ede3df;
+            border-radius: 6px;
+        }
+        .controls::-webkit-scrollbar-thumb {
+            background: #3b4c1a;
+            border-radius: 6px;
+        }
+        .controls::-webkit-scrollbar-thumb:hover {
+            background: #4c6121;
+        }
+
+        .controls label {
+            margin-right: 6px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .controls input[type="range"] {
+            width: 120px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            margin: 0 8px;
+        }
+
+        .controls input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, #3b4c1a var(--range-progress, 0%), #ede3df var(--range-progress, 0%));
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .controls input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, #3b4c1a var(--range-progress, 0%), #ede3df var(--range-progress, 0%));
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            border: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b4c1a;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .controls input[type="range"]::-moz-range-thumb {
+            border: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b4c1a;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .controls input[type="range"]::-webkit-slider-thumb:hover {
+            background: #4c6121;
+        }
+        .controls input[type="range"]::-moz-range-thumb:hover {
+            background: #4c6121;
+        }
+
+        .controls input[type="color"] {
+            border: none;
+            background: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            margin-left: 4px;
+        }
+        .controls input[type="checkbox"] {
+            transform: scale(1.2);
+            margin-left: 6px;
+            accent-color: #3b4c1a;
+        }
+        .controls button {
+            background: #3b4c1a;
+            color: #ede3df;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .controls button:hover {
+            background: #4c6121;
+        }
+
+        .value-display {
+            display: inline-block;
+            min-width: 30px; 
+            text-align: right;
+            margin-left: 2px; 
+        }
+
+        /* Using a specific class for fullscreen hidden state for clarity */
+        .visually-hidden-on-fullscreen {
+            display: none !important; 
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.5);
+            margin-left: 8px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+    <h1 class="main-title" id="mainTitle">LINE FLOW</h1>
+    <div id="sketch-container">
+        <div id="p5-canvas-placeholder"></div>
+        <div class="controls" id="controlsPanel">
+            <div class="control-group slider-group">
+                <label>
+                    Grid Resolution
+                    <input id="resolution" type="range" min="10" max="50" step="1"> <span id="resolution-value" class="value-display"></span>
+                </label>
+                <label>
+                    Line Length
+                    <input id="lineLength" type="range" min="5" max="300" step="1"> <span id="lineLength-value" class="value-display"></span>
+                </label>
+                <label>
+                    Noise Detail
+                    <input id="noiseScale" type="range" min="0.001" max="0.02" step="0.0005">
+                    <span id="noiseScale-value" class="value-display"></span>
+                </label>
+                <label>
+                    Animation Speed
+                    <input id="noiseSpeed" type="range" min="0.0001" max="0.002" step="0.0001"> <span id="noiseSpeed-value" class="value-display"></span>
+                </label>
+                <label>
+                    Line Thickness
+                    <input id="lineThickness" type="range" min="0.5" max="5" step="0.5"> <span id="lineThickness-value" class="value-display"></span>
+                </label>
+            </div>
+
+            <div class="control-group action-group">
+                <label>
+                    Freeze
+                    <input id="freeze" type="checkbox">
+                </label>
+                <label>
+                    Dynamic Color
+                    <input id="dynamicColor" type="checkbox">
+                </label>
+                <label id="fixedLineColorControl"> 
+                    Line Color
+                    <input id="lineColor" type="color">
+                </label>
+                <label id="dynamicColorHueShiftControl" class="visually-hidden-on-fullscreen">
+                    Color Palette Shift
+                    <input id="hueShift" type="range" min="0" max="360" step="1">
+                    <div id="hueShiftColorSwatch" class="color-swatch"></div>
+                </label>
+                <label>
+                    Background
+                    <input id="backgroundColor" type="color">
+                </label>
+                <button id="reset">Reset</button>
+                <button id="fullscreenButton">Fullscreen</button> 
+            </div>
+        </div>
+    </div>
+    <script>
+        let freezeNoiseTime = 0;
+
+        const settings = {
+            resolution: 20,
+            lineLength: 30, 
+            noiseScale: 0.001,
+            noiseSpeed: 0.0001,
+            lineThickness: 1,
+            lineColor: '#4c6121',
+            backgroundColor: '#ede3df',
+            freeze: false,
+            dynamicColor: false,
+            hueShift: 180, 
+            hueRangeWidth: 270 
+        };
+
+        function updateRangeSliderFill(inputElement) {
+            if (!inputElement) return; // Add check
+            const min = parseFloat(inputElement.min || 0);
+            const max = parseFloat(inputElement.max || 1);
+            const value = parseFloat(inputElement.value);
+            const percentage = ((value - min) / (max - min)) * 100;
+            inputElement.style.setProperty('--range-progress', `${percentage}%`);
+        }
+
+        // P5.js setup function
+        function setup() {
+            const canvasPlaceholder = document.getElementById('p5-canvas-placeholder');
+            const c = createCanvas(100, 100); 
+            c.parent(canvasPlaceholder);
+            
+            background(settings.backgroundColor);
+            strokeCap(ROUND);
+            
+            // Only call setupControls once the DOM is fully loaded and ready
+            // The DOMContentLoaded listener handles this, so we don't need to call it directly here anymore.
+            // This setup() is for p5.js, which usually runs after DOM is ready due to script placement.
+            // But having a dedicated DOMContentLoaded ensures all elements are there.
+            
+            // Initial update for sliders in case setupControls is called later by DOMContentLoaded
+            document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
+
+            windowResized(); 
+        }
+
+        function draw() {
+            background(settings.backgroundColor);
+
+            let noiseZ;
+            if (settings.freeze) {
+                noiseZ = freezeNoiseTime;
+            } else {
+                freezeNoiseTime = millis() * settings.noiseSpeed;
+                noiseZ = freezeNoiseTime;
+            }
+            
+            strokeWeight(settings.lineThickness);
+
+            for (let y = -settings.lineLength; y < height + settings.lineLength; y += settings.resolution) {
+                for (let x = -settings.lineLength; x < width + settings.lineLength; x += settings.resolution) {
+                    let rawNoiseValue = noise(
+                        x * settings.noiseScale,
+                        y * settings.noiseScale,
+                        noiseZ
+                    );
+
+                    let angle = rawNoiseValue * TWO_PI * 2;
+
+                    if (settings.dynamicColor) {
+                        colorMode(HSB, 360, 100, 100); 
+                        
+                        const hueRangeWidth = settings.hueRangeWidth; 
+                        const halfHueRangeWidth = hueRangeWidth / 2;
+
+                        let hueOffset = map(rawNoiseValue, 0, 1, -halfHueRangeWidth, halfHueRangeWidth);
+
+                        let finalHue = (settings.hueShift + hueOffset + 360) % 360; 
+
+                        stroke(finalHue, 80, 90); 
+                    } else {
+                        colorMode(RGB, 255, 255, 255); 
+                        stroke(settings.lineColor); 
+                    }
+
+                    let x2 = x + cos(angle) * settings.lineLength;
+                    let y2 = y + sin(angle) * settings.lineLength;
+
+                    line(x, y, x2, y2);
+                }
+            }
+        }
+
+        function windowResized() {
+            console.log("windowResized called."); 
+            const mainTitle = document.getElementById('mainTitle');
+            const controlsPanel = document.getElementById('controlsPanel');
+
+            let newCanvasWidth, newCanvasHeight;
+
+            if (document.fullscreenElement) {
+                console.log("In fullscreen mode. Hiding controls."); 
+                // Check if elements exist before manipulating classList
+                if (mainTitle) mainTitle.classList.add('visually-hidden-on-fullscreen');
+                if (controlsPanel) controlsPanel.classList.add('visually-hidden-on-fullscreen');
+
+                newCanvasWidth = window.innerWidth;
+                newCanvasHeight = window.innerHeight;
+
+            } else {
+                console.log("Not in fullscreen mode. Showing controls."); 
+                // Check if elements exist before manipulating classList
+                if (mainTitle) mainTitle.classList.remove('visually-hidden-on-fullscreen');
+                if (controlsPanel) controlsPanel.classList.remove('visually-hidden-on-fullscreen');
+
+                const bodyVerticalPadding = parseFloat(window.getComputedStyle(document.body).paddingTop) + parseFloat(window.getComputedStyle(document.body).paddingBottom);
+                
+                // Get heights safely, defaulting to 0 if element is null
+                const titleHeightWithMargin = mainTitle ? mainTitle.offsetHeight + parseFloat(window.getComputedStyle(mainTitle).marginBottom) : 0;
+                const controlsHeightWithMargin = controlsPanel ? controlsPanel.offsetHeight + parseFloat(window.getComputedStyle(controlsPanel).marginBottom) : 0;
+
+                const availableHeightForCanvas = window.innerHeight - bodyVerticalPadding - titleHeightWithMargin - controlsHeightWithMargin;
+
+                newCanvasWidth = windowWidth * 0.95;
+                const targetHeightRatio = 9 / 16;
+                const idealHeight = newCanvasWidth * targetHeightRatio;
+
+                newCanvasHeight = Math.min(idealHeight, availableHeightForCanvas);
+            }
+
+            resizeCanvas(newCanvasWidth, newCanvasHeight);
+            background(settings.backgroundColor);
+            console.log(`Canvas resized to: ${newCanvasWidth}x${newCanvasHeight}`); 
+        }
+
+        function setupControls() {
+            console.log("setupControls called.");
+            const fixedLineColorControl = document.getElementById('fixedLineColorControl'); 
+            const dynamicColorHueShiftControl = document.getElementById('dynamicColorHueShiftControl');
+            const hueShiftInput = document.getElementById('hueShift');
+            const hueShiftColorSwatch = document.getElementById('hueShiftColorSwatch');
+            const fullscreenButton = document.getElementById('fullscreenButton'); 
+            const resetButton = document.getElementById('reset'); // Get reset button
+
+            // Ensure elements exist before trying to access their properties or add listeners
+            if (!fixedLineColorControl || !dynamicColorHueShiftControl || !hueShiftInput || !hueShiftColorSwatch || !fullscreenButton || !resetButton) {
+                console.error("One or more control elements not found. Skipping control setup.");
+                return; // Exit if critical elements are missing
+            }
+
+            document.getElementById('resolution').value = settings.resolution;
+            document.getElementById('lineLength').value = settings.lineLength;
+            document.getElementById('noiseScale').value = settings.noiseScale;
+            document.getElementById('noiseSpeed').value = settings.noiseSpeed;
+            document.getElementById('lineThickness').value = settings.lineThickness;
+            document.getElementById('lineColor').value = settings.lineColor;
+            document.getElementById('backgroundColor').value = settings.backgroundColor;
+            document.getElementById('freeze').checked = settings.freeze;
+            document.getElementById('dynamicColor').checked = settings.dynamicColor;
+            hueShiftInput.value = settings.hueShift;
+
+            if (settings.dynamicColor) {
+                fixedLineColorControl.classList.add('visually-hidden-on-fullscreen'); // Use new class name
+                dynamicColorHueShiftControl.classList.remove('visually-hidden-on-fullscreen');
+            } else {
+                fixedLineColorControl.classList.remove('visually-hidden-on-fullscreen');
+                dynamicColorHueShiftControl.classList.add('visually-hidden-on-fullscreen');
+            }
+
+            function updateLabels() {
+                const resolutionValue = document.getElementById('resolution-value');
+                const lineLengthValue = document.getElementById('lineLength-value');
+                const noiseScaleValue = document.getElementById('noiseScale-value');
+                const noiseSpeedValue = document.getElementById('noiseSpeed-value');
+                const lineThicknessValue = document.getElementById('lineThickness-value');
+
+                if (resolutionValue) resolutionValue.textContent = settings.resolution;
+                if (lineLengthValue) lineLengthValue.textContent = Number(settings.lineLength).toFixed(0);
+                if (noiseScaleValue) noiseScaleValue.textContent = (settings.noiseScale * 1000).toFixed(0); 
+                if (noiseSpeedValue) noiseSpeedValue.textContent = (settings.noiseSpeed * 10000).toFixed(0); 
+                if (lineThicknessValue) lineThicknessValue.textContent = Number(settings.lineThickness).toFixed(1);
+                
+                if (hueShiftColorSwatch) hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`; 
+            }
+            updateLabels();
+
+            document.querySelectorAll('.controls input').forEach(input => {
+                input.addEventListener('input', e => {
+                    const id = e.target.id;
+                    const value = e.target.type === 'range' || e.target.type === 'number' ? Number(e.target.value) : e.target.value;
+                    
+                    if (id === 'freeze') {
+                        settings.freeze = e.target.checked;
+                    } else if (id === 'dynamicColor') {
+                        settings.dynamicColor = e.target.checked;
+                        if (settings.dynamicColor) {
+                            fixedLineColorControl.classList.add('visually-hidden-on-fullscreen');
+                            dynamicColorHueShiftControl.classList.remove('visually-hidden-on-fullscreen');
+                        } else {
+                            fixedLineColorControl.classList.remove('visually-hidden-on-fullscreen');
+                            dynamicColorHueShiftControl.classList.add('visually-hidden-on-fullscreen');
+                        }
+                    } else if (id === 'hueShift') { 
+                        settings.hueShift = value;
+                    }
+                    else {
+                        settings[id] = e.target.type === 'checkbox' ? e.target.checked : value;
+                    }
+
+                    if (e.target.type === 'range') {
+                        updateRangeSliderFill(e.target);
+                    }
+                    if (id === 'backgroundColor') {
+                        background(settings.backgroundColor); 
+                    }
+                    updateLabels();
+                });
+            });
+
+            resetButton.addEventListener('click', () => {
+                console.log("Reset button clicked.");
+                settings.resolution = 20;
+                settings.lineLength = 30; 
+                settings.noiseScale = 0.001;
+                settings.noiseSpeed = 0.0001;
+                settings.lineThickness = 1;
+                settings.lineColor = '#4c6121';
+                settings.backgroundColor = '#ede3df';
+                settings.freeze = false;
+                settings.dynamicColor = false; 
+                settings.hueShift = 180;
+                settings.hueRangeWidth = 270;
+
+                freezeNoiseTime = 0; 
+
+                // Re-initialize controls to update their values and states
+                setupControls(); 
+                background(settings.backgroundColor); 
+                document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
+            });
+
+            // Fullscreen button functionality
+            fullscreenButton.addEventListener('click', () => {
+                console.log("Fullscreen button clicked!"); 
+                if (!document.fullscreenElement) { 
+                    console.log("Attempting to enter fullscreen..."); 
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable full-screen mode:`, err); 
+                    });
+                } else { 
+                    console.log("Attempting to exit fullscreen..."); 
+                    document.exitFullscreen();
+                }
+            });
+
+            // Listen for fullscreen change events (e.g., user presses Esc)
+            document.addEventListener('fullscreenchange', () => {
+                console.log("Fullscreen state changed!"); 
+                windowResized(); 
+            });
+            document.addEventListener('webkitfullscreenchange', () => {
+                console.log("Webkit Fullscreen state changed!"); 
+                windowResized(); 
+            });
+            document.addEventListener('mozfullscreenchange', () => {
+                console.log("Mozilla Fullscreen state changed!"); 
+                windowResized(); 
+            });
+            document.addEventListener('MSFullscreenChange', () => {
+                console.log("MS Fullscreen state changed!"); 
+                windowResized(); 
+            });
+        }
+
+        // IMPORTANT: Call setupControls only after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded fired. Initializing controls.");
+            setupControls();
+        });
+    </script>
+</body>
+</html>
