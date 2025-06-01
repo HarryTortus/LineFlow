@@ -98,8 +98,8 @@
         #site-footer a:hover { text-decoration: underline; }
         #site-footer span { color: #3b4c1a; }
         
-        @media (max-width: 600px) { /* ... (Your existing 600px media query styles) ... */ }
-        @media (max-width: 420px) { /* ... (Your existing 420px media query styles) ... */ }
+        @media (max-width: 600px) { /* ... (Your existing 600px media query) ... */ }
+        @media (max-width: 420px) { /* ... (Your existing 420px media query) ... */ }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
@@ -108,7 +108,45 @@
     <div id="sketch-container">
         <div id="p5-canvas-placeholder"></div>
         <div class="controls" id="controlsPanel">
+            <div class="control-group slider-group">
+                <label> Grid Resolution
+                    <input id="resolution" type="range" min="10" max="50" step="1" value="20"> <span id="resolution-value" class="value-display"></span>
+                </label>
+                <label> Line Length
+                    <input id="lineLength" type="range" min="5" max="300" step="1" value="30"> <span id="lineLength-value" class="value-display"></span>
+                </label>
+                <label> Noise Detail
+                    <input id="noiseScale" type="range" min="0.001" max="0.02" step="0.0005" value="0.001">
+                    <span id="noiseScale-value" class="value-display"></span>
+                </label>
+                <label> Animation Speed
+                    <input id="noiseSpeed" type="range" min="0.0001" max="0.002" step="0.0001" value="0.0001"> <span id="noiseSpeed-value" class="value-display"></span>
+                </label>
+                <label> Line Thickness
+                    <input id="lineThickness" type="range" min="0.5" max="5" step="0.5" value="1"> <span id="lineThickness-value" class="value-display"></span>
+                </label>
             </div>
+            <div class="control-group action-group">
+                <label> Freeze
+                    <input id="freeze" type="checkbox">
+                </label>
+                <label> Dynamic Color
+                    <input id="dynamicColor" type="checkbox">
+                </label>
+                <label id="fixedLineColorControl"> Line Color
+                    <input id="lineColor" type="color" value="#4c6121">
+                </label>
+                <label id="dynamicColorHueShiftControl" style="display: none;"> Color Palette Shift
+                    <input id="hueShift" type="range" min="0" max="360" step="1" value="180">
+                    <div id="hueShiftColorSwatch" class="color-swatch"></div>
+                </label>
+                <label> Background
+                    <input id="backgroundColor" type="color" value="#ede3df">
+                </label>
+                <button id="reset">Reset</button>
+                <button id="fullscreenButton">Fullscreen</button>
+            </div>
+        </div>
     </div>
     <footer id="site-footer">
         <a href="https://www.mickeywilliamson3d.com/" target="_blank">MickeyWilliamson3D.com</a>
@@ -155,39 +193,19 @@
             }
             strokeCap(ROUND);
             
+            // Call setupControls first to ensure settings might be updated from DOM if needed,
+            // though current logic sets DOM from settings.
+            // Then apply slider fills.
+            if (!setupControls()) { // Check return value of setupControls
+                 console.error("Line Flow: setupControls() failed. Some UI might not be initialized.");
+            }
             document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
+            
             windowResized(); 
             console.log("Line Flow: p5.js setup() finished.");
         }
 
-        function draw() {
-            try {
-                background(settings.backgroundColor);
-            } catch (e) {
-                console.error("Line Flow Error in draw() background call:", e); return;
-            }
-            let noiseZ = settings.freeze ? freezeNoiseTime : (freezeNoiseTime = millis() * settings.noiseSpeed);
-            strokeWeight(settings.lineThickness);
-
-            for (let y = -settings.lineLength; y < height + settings.lineLength; y += settings.resolution) {
-                for (let x = -settings.lineLength; x < width + settings.lineLength; x += settings.resolution) {
-                    let rawNoiseValue = noise(x * settings.noiseScale, y * settings.noiseScale, noiseZ);
-                    let angle = rawNoiseValue * TWO_PI * 2;
-
-                    if (settings.dynamicColor) {
-                        colorMode(HSB, 360, 100, 100);
-                        const halfHueRangeWidth = settings.hueRangeWidth / 2;
-                        let hueOffset = map(rawNoiseValue, 0, 1, -halfHueRangeWidth, halfHueRangeWidth);
-                        let finalHue = (settings.hueShift + hueOffset + 360) % 360;
-                        stroke(finalHue, 80, 90);
-                    } else {
-                        colorMode(RGB, 255, 255, 255);
-                        stroke(settings.lineColor);
-                    }
-                    line(x, y, x + cos(angle) * settings.lineLength, y + sin(angle) * settings.lineLength);
-                }
-            }
-        }
+        function draw() { /* ... (Your existing draw function) ... */ }
 
         function windowResized() {
             console.log("Line Flow: windowResized() called.");
@@ -198,7 +216,7 @@
 
             if (!mainTitle || !controlsPanel || !sketchContainer || !siteFooter) {
                 console.error("Line Flow: windowResized - One or more critical layout elements not found. Aborting resize.");
-                if (typeof resizeCanvas === 'function') resizeCanvas(100,100); // Minimal canvas
+                if (typeof resizeCanvas === 'function') resizeCanvas(100,100); 
                 if (typeof background === 'function') background(220); 
                 return;
             }
@@ -213,18 +231,14 @@
             } else {
                 document.body.classList.remove('fullscreen-active');
                 
-                // **MODIFIED LOGIC FOR CANVAS SIZING**
-                newCanvasWidth = sketchContainer.clientWidth; // Always base width on container
+                newCanvasWidth = sketchContainer.clientWidth; 
 
                 const bodyStyle = window.getComputedStyle(document.body);
                 const bodyVerticalPadding = parseFloat(bodyStyle.paddingTop || 0) + parseFloat(bodyStyle.paddingBottom || 0);
-
                 const titleStyle = window.getComputedStyle(mainTitle);
                 const titleHeight = mainTitle.offsetHeight + parseFloat(titleStyle.marginTop || 0) + parseFloat(titleStyle.marginBottom || 0);
-                
                 const controlsPanelStyle = window.getComputedStyle(controlsPanel);
                 const controlsHeight = controlsPanel.offsetHeight + parseFloat(controlsPanelStyle.marginTop || 0) + parseFloat(controlsPanelStyle.marginBottom || 0);
-                
                 const footerStyle = window.getComputedStyle(siteFooter);
                 const footerTotalHeight = siteFooter.offsetHeight + parseFloat(footerStyle.marginTop || 0) + parseFloat(footerStyle.marginBottom || 0);
 
@@ -235,15 +249,12 @@
                                                       footerTotalHeight - 
                                                       CANVAS_MARGIN_BOTTOM;
                 
-                let desiredSquareHeight = newCanvasWidth; // Aim for square height based on actual width
-
+                let desiredSquareHeight = newCanvasWidth; 
                 if (desiredSquareHeight > availableVerticalSpaceForCanvas) {
-                    newCanvasHeight = availableVerticalSpaceForCanvas; // Cap height if too tall
-                    // Width (newCanvasWidth) remains sketchContainer.clientWidth
+                    newCanvasHeight = availableVerticalSpaceForCanvas; 
                 } else {
-                    newCanvasHeight = desiredSquareHeight; // Otherwise, height makes it square
+                    newCanvasHeight = desiredSquareHeight; 
                 }
-                // **END OF MODIFIED LOGIC**
                 
                 newCanvasWidth = Math.max(50, newCanvasWidth); 
                 newCanvasHeight = Math.max(50, newCanvasHeight);
@@ -251,70 +262,73 @@
 
             if (typeof resizeCanvas === 'function') {
                 resizeCanvas(newCanvasWidth, newCanvasHeight);
-                console.log("Line Flow: Canvas resized to: " + newCanvasWidth + "x" + newCanvasHeight);
-            } else {
-                console.error("Line Flow: resizeCanvas function not found!");
-            }
+            } 
             if (typeof background === 'function' && settings && settings.backgroundColor) {
                  background(settings.backgroundColor); 
-            } else {
-                console.error("Line Flow: Could not draw background in windowResized.");
             }
-            console.log("Line Flow: windowResized() finished.");
+            console.log("Line Flow: windowResized() finished, canvas: " + newCanvasWidth + "x" + newCanvasHeight);
         }
 
         function setupControls() {
-            console.log("Line Flow: setupControls() called.");
-            let allElementsFound = true;
-            const getEl = (id) => {
+            console.log("Line Flow: setupControls() started.");
+            let allCriticalElementsFound = true;
+            const getEl = (id, isCritical = false) => { // Default isCritical to false for spans/display elements
                 const el = document.getElementById(id);
                 if (!el) {
-                    console.warn(`Line Flow: HTML Element with ID '${id}' not found.`); // Warn instead of error for non-critical
-                    allElementsFound = false; // Still flag, but might not be fatal for all elements
+                    console.warn(`Line Flow: HTML Element with ID '${id}' not found.`);
+                    if (isCritical) {
+                        allCriticalElementsFound = false;
+                        console.error(`Line Flow: CRITICAL HTML Element with ID '${id}' not found.`);
+                    }
                 }
                 return el;
             };
 
-            // Get all control elements, using the helper to log if any are missing
-            const fixedLineColorControl = getEl('fixedLineColorControl');
-            const dynamicColorHueShiftControl = getEl('dynamicColorHueShiftControl');
-            const hueShiftInput = getEl('hueShift');
-            const hueShiftColorSwatch = getEl('hueShiftColorSwatch');
-            const fullscreenButton = getEl('fullscreenButton');
-            const resetButton = getEl('reset');
-            const versionDisplayEl = getEl('versionDisplay');
+            // Get all control elements, flagging critical ones
+            const fixedLineColorControl = getEl('fixedLineColorControl', true);
+            const dynamicColorHueShiftControl = getEl('dynamicColorHueShiftControl', true);
+            const hueShiftInput = getEl('hueShift', true); // Critical if dynamicColorHueShiftControl is visible
+            const hueShiftColorSwatch = getEl('hueShiftColorSwatch', false); // Display only
+            const fullscreenButton = getEl('fullscreenButton', true);
+            const resetButton = getEl('reset', true);
+            const versionDisplayEl = getEl('versionDisplay', false); // Display only
 
-            // Value display spans
+            // Value display spans (not critical for script execution, but for UI)
             const resVal = getEl('resolution-value');
             const lenVal = getEl('lineLength-value');
             const noiseSVal = getEl('noiseScale-value');
             const noiseSpVal = getEl('noiseSpeed-value');
             const thickVal = getEl('lineThickness-value');
+
+            if (!allCriticalElementsFound) {
+                console.error("Line Flow: One or more CRITICAL control elements missing. setupControls() aborted to prevent errors.");
+                return false; // Abort setup if critical interactive elements are missing
+            }
             
             if (versionDisplayEl) { 
                 versionDisplayEl.textContent = `v${versionNumber}`;
             }
 
-            // Check for critical elements before proceeding with logic that depends on them
-            if (!fixedLineColorControl || !dynamicColorHueShiftControl || !hueShiftInput || !fullscreenButton || !resetButton) {
-                 console.error("Line Flow: Critical control elements missing. Some controls may not function.");
-                 // Decide if this is fatal enough to return, for now, let it try to set up what it can
-            }
-
+            // Initialize control values from settings object
+            // This loop iterates over keys in `settings` and tries to find HTML elements with matching IDs
             Object.keys(settings).forEach(key => {
                 const input = document.getElementById(key); 
                 if (input) {
                     try {
-                        if (input.type === 'checkbox') input.checked = settings[key];
-                        else input.value = settings[key];
+                        if (input.type === 'checkbox') {
+                            input.checked = settings[key];
+                        } else {
+                            // Ensure that elements that don't have a .value property (like divs) aren't assigned to.
+                            if (typeof input.value !== 'undefined') {
+                                input.value = settings[key];
+                            } else if (input.tagName !== "DIV") { // hueShiftColorSwatch is a DIV
+                                console.warn(`Line Flow: Element with ID '${key}' does not have a value property. Skipping initialization from settings.`);
+                            }
+                        }
                     } catch (e) {
-                        console.error(`Line Flow: Error setting value for input #${key}:`, e);
+                        console.error(`Line Flow: Error setting value/checked for input #${key}:`, e);
                     }
-                } else {
-                    // This means a setting key doesn't have a corresponding input ID.
-                    // This is fine for settings like hueRangeWidth.
-                    // console.warn(`Line Flow: No input found for setting key '${key}'`);
-                }
+                } 
             });
             
             if (fixedLineColorControl && dynamicColorHueShiftControl) { 
@@ -328,12 +342,17 @@
             }
 
             function updateLabels() {
+                console.log("Line Flow: updateLabels() called.");
                 if(resVal) resVal.textContent = settings.resolution;
                 if(lenVal) lenVal.textContent = Number(settings.lineLength).toFixed(0);
                 if(noiseSVal) noiseSVal.textContent = (settings.noiseScale * 1000).toFixed(0);
                 if(noiseSpVal) noiseSpVal.textContent = (settings.noiseSpeed * 10000).toFixed(0);
                 if(thickVal) thickVal.textContent = Number(settings.lineThickness).toFixed(1);
-                if (hueShiftColorSwatch) hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`;
+                if (hueShiftColorSwatch && settings.dynamicColor) { // Only update if dynamicColor is on and swatch exists
+                     hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`;
+                } else if (hueShiftColorSwatch) {
+                    hueShiftColorSwatch.style.backgroundColor = 'transparent'; // Or some default
+                }
             }
             updateLabels(); 
 
@@ -341,6 +360,7 @@
                 if (el.tagName === 'BUTTON' && el.id !== 'reset' && el.id !== 'fullscreenButton') return;
 
                 let eventType = (el.type === 'range' || el.type === 'color') ? 'input' : 'change';
+                if (el.type === 'checkbox') eventType = 'change'; // Checkboxes use 'change'
                 if (el.tagName === 'BUTTON') eventType = 'click';
 
                 el.addEventListener(eventType, e => { 
@@ -352,7 +372,7 @@
                     else if (target.type === 'range' || target.type === 'number') value = Number(target.value);
                     else value = target.value;
                     
-                    if (target.tagName !== 'BUTTON') {
+                    if (target.tagName !== 'BUTTON') { // Buttons handle their own logic in specific listeners
                        settings[id] = value;
                     }
 
@@ -372,14 +392,30 @@
             });
             
             if(resetButton) resetButton.addEventListener('click', () => {
+                console.log("Line Flow: Reset button clicked.");
                 settings.resolution = 20; settings.lineLength = 30; settings.noiseScale = 0.001;
                 settings.noiseSpeed = 0.0001; settings.lineThickness = 1; settings.lineColor = '#4c6121';
                 settings.backgroundColor = '#ede3df'; settings.freeze = false; settings.dynamicColor = false;
                 settings.hueShift = 180; freezeNoiseTime = 0;
-                setupControls(); // Re-initialize UI to defaults
+                
+                // Re-initialize UI to defaults by re-running parts of setupControls or setting manually
+                Object.keys(settings).forEach(key => {
+                    const input = document.getElementById(key);
+                    if (input) {
+                        if (input.type === 'checkbox') input.checked = settings[key];
+                        else input.value = settings[key];
+                        if (input.type === 'range') updateRangeSliderFill(input);
+                    }
+                });
+                if (fixedLineColorControl && dynamicColorHueShiftControl) {
+                    fixedLineColorControl.style.display = 'flex';
+                    dynamicColorHueShiftControl.style.display = 'none';
+                }
+                updateLabels(); // Update text labels
+
                 if(typeof background === 'function') background(settings.backgroundColor);
-                document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
             });
+
             if(fullscreenButton) fullscreenButton.addEventListener('click', () => {
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch(err => console.error(`Error: ${err.message} (${err.name})`));
@@ -391,12 +427,13 @@
             ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => 
                 document.addEventListener(event, windowResized)
             );
-            console.log("Line Flow: setupControls() finished.");
+            console.log("Line Flow: setupControls() finished successfully.");
+            return true; // Indicate success
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             console.log("Line Flow: DOMContentLoaded fired.");
-            // setupControls is called from p5.js setup(), which is typically deferred by p5.js itself.
+            // p5.js setup() will call setupControls()
         });
         console.log("Line Flow: Script execution finished parsing.");
     </script>
