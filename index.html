@@ -15,7 +15,7 @@
             align-items: center; 
             min-height: 100vh; 
             padding-top: 20px; 
-            padding-bottom: 10px; /* Reduced bottom padding */
+            padding-bottom: 10px; 
             box-sizing: border-box;
         }
 
@@ -34,7 +34,7 @@
 
         #sketch-container {
             width: 100%; 
-            /* max-width: 1200px; */ /* Removed max-width to allow wider expansion */
+            /* max-width: 1200px; */ /* User confirmed this was removed for wider expansion */
             display: flex;
             flex-direction: column; 
             align-items: center; 
@@ -76,7 +76,6 @@
             box-shadow: none !important; 
         }
 
-
         .controls {
             display: flex;
             flex-direction: column;
@@ -94,7 +93,7 @@
             box-sizing: border-box;
             flex-shrink: 0; 
             overflow-x: auto; 
-            margin-bottom: 20px; 
+            margin-bottom: 10px; /* MODIFIED: Reduced space above footer */
         }
 
         .controls .control-group {
@@ -228,24 +227,27 @@
 
         #site-footer {
             width: 100%;
-            text-align: center;
-            padding: 10px 0; /* Reduced vertical padding */
+            padding: 5px 0; /* MODIFIED: Reduced vertical padding */
             font-family: 'Oswald', sans-serif;
             font-size: 0.9em;
             color: #3b4c1a;
             margin-top: auto; 
             flex-shrink: 0; 
             box-sizing: border-box;
+            /* Added flex properties for better alignment of items */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px; 
         }
 
         #site-footer a {
             color: #3b4c1a;
             text-decoration: none;
-            margin: 0 10px;
         }
-
-        #site-footer a:hover {
-            text-decoration: underline;
+        #site-footer a:hover { text-decoration: underline; }
+        #site-footer span { /* For styling the pipe separators and version number */
+            color: #3b4c1a;
         }
         
         @media (max-width: 600px) {
@@ -293,7 +295,6 @@
                 margin-top: 10px; 
             }
         }
-
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
 </head>
@@ -353,11 +354,14 @@
         </div>
     </div>
     <footer id="site-footer">
-        <a href="https://www.mickeywilliamson3d.com/" target="_blank">MickeyWilliamson3D.com</a> | 
+        <a href="https://www.mickeywilliamson3d.com/" target="_blank">MickeyWilliamson3D.com</a>
+        <span>|</span>
         <a href="https://harrytortus.github.io/" target="_blank">HarryTortus.GitHub.io</a>
-    </footer>
+        <span>|</span>
+        <span id="versionDisplay"></span> </footer>
     <script>
         let freezeNoiseTime = 0;
+        const versionNumber = "0.50"; // MODIFIED: Added version number
 
         const settings = {
             resolution: 20,
@@ -418,13 +422,20 @@
         }
 
         function windowResized() {
+            // This function uses the version from your provided script, which aims for a square canvas
             const mainTitle = document.getElementById('mainTitle');
             const controlsPanel = document.getElementById('controlsPanel');
-            const sketchContainer = document.getElementById('sketch-container');
-            const siteFooter = document.getElementById('site-footer');
+            const sketchContainer = document.getElementById('sketch-container'); // Used for width
+            // const siteFooter = document.getElementById('site-footer'); // Not directly used in size calc here
 
             let newCanvasWidth, newCanvasHeight;
-            const CANVAS_MARGIN_BOTTOM = 20; // CSS margin-bottom for canvas
+            const CANVAS_MARGIN_BOTTOM = 20; 
+            
+            // Body padding - from your original file, simplified assuming sketch-container handles internal padding
+            const bodyStyle = window.getComputedStyle(document.body);
+            const bodyVerticalPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+            const bodyHorizontalPadding = parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+
 
             if (document.fullscreenElement) {
                 document.body.classList.add('fullscreen-active');
@@ -433,33 +444,34 @@
             } else {
                 document.body.classList.remove('fullscreen-active');
 
+                // Calculate available width for canvas based on sketchContainer's clientWidth
+                // sketchContainer has its own padding, clientWidth respects that.
+                let availableWidthForSketch = window.innerWidth - bodyHorizontalPadding;
                 newCanvasWidth = sketchContainer.clientWidth; 
 
-                const titleStyle = window.getComputedStyle(mainTitle);
-                const titleHeight = mainTitle.offsetHeight + parseFloat(titleStyle.marginTop) + parseFloat(titleStyle.marginBottom);
-                
+
+                const titleHeight = mainTitle ? (mainTitle.offsetHeight + parseFloat(window.getComputedStyle(mainTitle).marginBottom)) : 0;
                 const controlsPanelStyle = window.getComputedStyle(controlsPanel);
-                const controlsHeight = controlsPanel.offsetHeight + parseFloat(controlsPanelStyle.marginTop) + parseFloat(controlsPanelStyle.marginBottom);
+                const controlsHeight = controlsPanel ? (controlsPanel.offsetHeight + parseFloat(controlsPanelStyle.marginTop) + parseFloat(controlsPanelStyle.marginBottom)) : 0;
                 
+                const siteFooter = document.getElementById('site-footer'); // get it here for height
                 const footerStyle = window.getComputedStyle(siteFooter);
-                const footerTotalHeight = siteFooter.offsetHeight + parseFloat(footerStyle.marginTop) + parseFloat(footerStyle.marginBottom);
-
-                const bodyStyle = window.getComputedStyle(document.body);
-                const bodyVerticalPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+                const footerTotalHeight = siteFooter ? (siteFooter.offsetHeight + parseFloat(footerStyle.marginTop) + parseFloat(footerStyle.marginBottom)) : 0;
                 
-                let availableHeightForCanvasAndItsMargin = window.innerHeight - bodyVerticalPadding - titleHeight - controlsHeight - footerTotalHeight;
-                let maxCanvasHeight = availableHeightForCanvasAndItsMargin - CANVAS_MARGIN_BOTTOM;
+                // Available height for the canvas, considering all other elements + body padding + canvas margin
+                const availableVerticalSpace = window.innerHeight - bodyVerticalPadding - titleHeight - controlsHeight - footerTotalHeight - CANVAS_MARGIN_BOTTOM;
 
-                let desiredCanvasHeight = newCanvasWidth; // Aim for square
-
-                if (desiredCanvasHeight > maxCanvasHeight) {
-                    newCanvasHeight = maxCanvasHeight;
-                    // Optional: if height limits, make width also to match for square, or let it be wider
-                    // newCanvasWidth = newCanvasHeight; // Uncomment to force square even when height constrained
+                // Your original script aimed for a square canvas based on available width, then capped by height
+                let desiredCanvasHeightBasedOnWidth = newCanvasWidth; // For square
+                
+                if (desiredCanvasHeightBasedOnWidth > availableVerticalSpace) {
+                    newCanvasHeight = availableVerticalSpace;
+                    newCanvasWidth = availableVerticalSpace; // Maintain square if height is the constraint
                 } else {
-                    newCanvasHeight = desiredCanvasHeight;
+                    newCanvasHeight = desiredCanvasHeightBasedOnWidth;
                 }
                 
+                // Ensure minimum size
                 newCanvasWidth = Math.max(50, newCanvasWidth); 
                 newCanvasHeight = Math.max(50, newCanvasHeight);
             }
@@ -475,10 +487,16 @@
             const hueShiftColorSwatch = document.getElementById('hueShiftColorSwatch');
             const fullscreenButton = document.getElementById('fullscreenButton');
             const resetButton = document.getElementById('reset');
+            
+            const versionDisplayEl = document.getElementById('versionDisplay'); // MODIFIED: Get version display
 
-            if (!fixedLineColorControl || !dynamicColorHueShiftControl || !hueShiftInput || !hueShiftColorSwatch || !fullscreenButton || !resetButton) {
+            if (!fixedLineColorControl || !dynamicColorHueShiftControl || !hueShiftInput || !hueShiftColorSwatch || !fullscreenButton || !resetButton ) {
                 console.error("One or more control elements not found. Skipping control setup.");
-                return;
+            }
+            if (versionDisplayEl) { // MODIFIED: Set version text
+                versionDisplayEl.textContent = `v${versionNumber}`;
+            } else {
+                console.warn("Version display element 'versionDisplay' not found in footer.");
             }
 
             Object.keys(settings).forEach(key => {
@@ -498,11 +516,17 @@
             }
 
             function updateLabels() {
-                document.getElementById('resolution-value').textContent = settings.resolution;
-                document.getElementById('lineLength-value').textContent = Number(settings.lineLength).toFixed(0);
-                document.getElementById('noiseScale-value').textContent = (settings.noiseScale * 1000).toFixed(0);
-                document.getElementById('noiseSpeed-value').textContent = (settings.noiseSpeed * 10000).toFixed(0);
-                document.getElementById('lineThickness-value').textContent = Number(settings.lineThickness).toFixed(1);
+                const resVal = document.getElementById('resolution-value');
+                if(resVal) resVal.textContent = settings.resolution; // Added checks
+                const lenVal = document.getElementById('lineLength-value');
+                if(lenVal) lenVal.textContent = Number(settings.lineLength).toFixed(0);
+                const noiseSVal = document.getElementById('noiseScale-value');
+                if(noiseSVal) noiseSVal.textContent = (settings.noiseScale * 1000).toFixed(0);
+                const noiseSpVal = document.getElementById('noiseSpeed-value');
+                if(noiseSpVal) noiseSpVal.textContent = (settings.noiseSpeed * 10000).toFixed(0);
+                const thickVal = document.getElementById('lineThickness-value');
+                if(thickVal) thickVal.textContent = Number(settings.lineThickness).toFixed(1);
+                
                 if (hueShiftColorSwatch) hueShiftColorSwatch.style.backgroundColor = `hsl(${settings.hueShift}, 80%, 70%)`;
             }
             updateLabels();
@@ -510,7 +534,12 @@
             document.querySelectorAll('.controls input, .controls button').forEach(el => {
                 if (el.tagName === 'BUTTON' && el.id !== 'reset' && el.id !== 'fullscreenButton') return;
 
-                el.addEventListener('input', e => { 
+                // Changed to 'change' for sliders and color pickers for performance, 'click' for checkboxes/buttons
+                let eventType = (el.type === 'range' || el.type === 'color') ? 'input' : 'change';
+                if (el.tagName === 'BUTTON') eventType = 'click';
+
+
+                el.addEventListener(eventType, e => { 
                     const id = e.target.id;
                     const target = e.target;
                     let value;
@@ -519,7 +548,11 @@
                     else if (target.type === 'range' || target.type === 'number') value = Number(target.value);
                     else value = target.value;
                     
-                    settings[id] = value;
+                    // For buttons, we don't set settings[id] directly here; their specific listeners handle actions
+                    if (target.tagName !== 'BUTTON') {
+                       settings[id] = value;
+                    }
+
 
                     if (id === 'dynamicColor') {
                         if (settings.dynamicColor) {
@@ -548,6 +581,7 @@
                 settings.dynamicColor = false;
                 settings.hueShift = 180;
                 freezeNoiseTime = 0;
+                // Re-call setupControls to reset UI elements to these new default settings
                 setupControls(); 
                 background(settings.backgroundColor);
                 document.querySelectorAll('.controls input[type="range"]').forEach(updateRangeSliderFill);
@@ -557,7 +591,7 @@
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch(err => console.error(`Error: ${err.message} (${err.name})`));
                 } else {
-                    document.exitFullscreen();
+                    if(document.exitFullscreen) document.exitFullscreen();
                 }
             });
 
